@@ -57,20 +57,23 @@ export async function syncNewPhotos(
                 const assetInfo = await MediaLibrary.getAssetInfoAsync(asset);
                 uri = assetInfo.localUri || asset.uri;
             } catch {
-                // Use fallback URI
+                // Keep asset.uri
             }
 
-            // Skip OCR entirely if already indexed in DB
             if (!isMemeIndexed(uri)) {
-                const text = await extractTextFromImage(uri);
+                try {
+                    const text = await extractTextFromImage(uri);
 
-                if (text && text.trim().length > 0) {
-                    saveMeme(uri, text);
-                    newlyIndexedCount++;
+                    if (text && text.trim().length > 0) {
+                        saveMeme(uri, text);
+                        newlyIndexedCount++;
 
-                    if (onNewMemeFound) {
-                        onNewMemeFound({ uri, extracted_text: text.toLowerCase() });
+                        if (onNewMemeFound) {
+                            onNewMemeFound({ uri, extracted_text: text.toLowerCase() });
+                        }
                     }
+                } catch (ocrErr) {
+                    console.warn(`[Sync] OCR skipped for asset ${uri}:`, ocrErr);
                 }
             }
 
