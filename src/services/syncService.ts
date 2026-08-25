@@ -1,6 +1,6 @@
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as SQLite from 'expo-sqlite';
-import { extractTextFromImage } from './ocr';
+import {extractTextFromImage, isValidMemeText} from './ocr';
 import {isMemeIndexed, saveMeme} from './db';
 
 const db = SQLite.openDatabaseSync('memes.db');
@@ -60,11 +60,12 @@ export async function syncNewPhotos(
                 // Keep asset.uri
             }
 
+            // Inside syncNewPhotos in src/services/syncService.ts:
             if (!isMemeIndexed(uri)) {
                 try {
                     const text = await extractTextFromImage(uri);
 
-                    if (text && text.trim().length > 0) {
+                    if (isValidMemeText(text)) {
                         saveMeme(uri, text);
                         newlyIndexedCount++;
 

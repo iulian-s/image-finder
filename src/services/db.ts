@@ -75,3 +75,12 @@ export function getInitialMemes(limit: number = 30): { uri: string; extracted_te
         [limit]
     );
 }
+
+export function cleanInvalidMemes() {
+    // Removes entries with 2 or fewer characters or no letters
+    db.execSync(`
+    DELETE FROM memes 
+    WHERE LENGTH(TRIM(extracted_text)) < 3
+       OR extracted_text NOT GLOB '*[a-zA-Z]*';
+  `);
+}
