@@ -9,18 +9,23 @@ import {
     ActivityIndicator,
     Alert,
     Dimensions,
+    useColorScheme,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as Sharing from 'expo-sharing';
 
 import { initDatabase, searchMemes, getAllMemes, getInitialMemes } from '@/services/db';
 import { syncNewPhotos } from '@/services/syncService';
 import { registerBackgroundSync } from '@/services/backgroundTask';
-import { MemeCard } from '@/services/MemeCard';
+import { MemeCard } from '@/components/MemeCard';
 
 const ITEM_SIZE = (Dimensions.get('window').width - 32) / 3;
 
 export default function MemeSearchScreen() {
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === 'dark';
+
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<{ uri: string; extracted_text: string }[]>([]);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -28,6 +33,20 @@ export default function MemeSearchScreen() {
     const queryRef = useRef('');
 
     queryRef.current = query;
+
+    // Dynamic Theme Colors
+    const theme = {
+        background: isDark ? '#0f172a' : '#f8fafc',
+        card: isDark ? '#1e293b' : '#ffffff',
+        text: isDark ? '#f8fafc' : '#0f172a',
+        subtext: isDark ? '#94a3b8' : '#64748b',
+        border: isDark ? '#334155' : '#cbd5e1',
+        inputBg: isDark ? '#1e293b' : '#ffffff',
+        placeholder: isDark ? '#64748b' : '#94a3b8',
+        clearBtn: isDark ? '#334155' : '#e2e8f0',
+        clearBtnText: isDark ? '#94a3b8' : '#64748b',
+        accent: isDark ? '#60a5fa' : '#2563eb',
+    };
 
     const refreshGallery = useCallback(() => {
         const all = getAllMemes();
@@ -37,7 +56,6 @@ export default function MemeSearchScreen() {
     useEffect(() => {
         let isMounted = true;
 
-        // 1. Initial cached paint
         try {
             initDatabase();
             const cached = getInitialMemes(60);
@@ -46,7 +64,6 @@ export default function MemeSearchScreen() {
             console.error('Initial DB read failed:', e);
         }
 
-        // 2. Start sync
         const timer = setTimeout(async () => {
             if (!isMounted) return;
 
@@ -65,7 +82,6 @@ export default function MemeSearchScreen() {
                 }
 
                 const count = await syncNewPhotos((newMeme) => {
-                    // Append smoothly without shifting existing element indices
                     if (!queryRef.current.trim() && isMounted) {
                         setResults((prev) => {
                             if (prev.some((item) => item.uri === newMeme.uri)) return prev;
@@ -75,7 +91,7 @@ export default function MemeSearchScreen() {
                 });
 
                 if (isMounted) {
-                    setSyncStatus(count > 0 ? `Indexed ${count} new image(s)` : 'All images up to date');
+                    setSyncStatus(count > 0 ? `Indexed ${count} new meme(s)` : 'All memes up to date');
                     if (!queryRef.current.trim()) {
                         refreshGallery();
                     }
@@ -136,32 +152,44 @@ export default function MemeSearchScreen() {
     );
 
     return (
-        <View style={styles.container}>
-            {/* Search Input */}
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
+            <StatusBar style={isDark ? 'light' : 'dark'} />
+
+            {/* Search Bar */}
             <View style={styles.searchWrapper}>
                 <TextInput
-                    style={styles.searchInput}
-                    placeholder="Type text inside image..."
-                    placeholderTextColor="#94a3b8"
+                    style={[
+                        styles.searchInput,
+                        {
+                            backgroundColor: theme.inputBg,
+                            borderColor: theme.border,
+                            color: theme.text,
+                        },
+                    ]}
+                    placeholder="Type text inside meme (e.g. 'queen')..."
+                    placeholderTextColor={theme.placeholder}
                     value={query}
                     onChangeText={handleSearch}
                     autoCapitalize="none"
                 />
                 {query.length > 0 && (
-                    <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
-                        <Text style={styles.clearBtnText}>✕</Text>
+                    <TouchableOpacity
+                        onPress={handleClear}
+                        style={[styles.clearBtn, { backgroundColor: theme.clearBtn }]}
+                    >
+                        <Text style={[styles.clearBtnText, { color: theme.clearBtnText }]}>✕</Text>
                     </TouchableOpacity>
                 )}
             </View>
 
             {/* Status Bar */}
             <View style={styles.statusBar}>
-                {isSyncing && <ActivityIndicator size="small" color="#2563eb" style={styles.spinner} />}
-                <Text style={styles.statusText}>{syncStatus}</Text>
-                <Text style={styles.countText}>{results.length} items</Text>
+                {isSyncing && <ActivityIndicator size="small" color={theme.accent} style={styles.spinner} />}
+                <Text style={[styles.statusText, { color: theme.subtext }]}>{syncStatus}</Text>
+                <Text style={[styles.countText, { color: theme.accent }]}>{results.length} items</Text>
             </View>
 
-            {/* Flashing-Free Grid */}
+            {/* Grid */}
             <FlatList
                 data={results}
                 keyExtractor={keyExtractor}
@@ -179,10 +207,10 @@ export default function MemeSearchScreen() {
                 })}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>
+                        <Text style={[styles.emptyText, { color: theme.subtext }]}>
                             {query.trim().length > 0
-                                ? `No images found matching "${query}"`
-                                : 'Scanning gallery for images...'}
+                                ? `No memes found matching "${query}"`
+                                : 'Scanning gallery for memes...'}
                         </Text>
                     </View>
                 }
@@ -196,7 +224,6 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingTop: 60,
         paddingHorizontal: 16,
-        backgroundColor: '#f8fafc',
     },
     searchWrapper: {
         position: 'relative',
@@ -204,14 +231,11 @@ const styles = StyleSheet.create({
     },
     searchInput: {
         height: 50,
-        backgroundColor: '#ffffff',
         borderRadius: 12,
         paddingLeft: 16,
         paddingRight: 40,
         fontSize: 16,
         borderWidth: 1,
-        borderColor: '#cbd5e1',
-        color: '#0f172a',
         elevation: 2,
     },
     clearBtn: {
@@ -220,12 +244,10 @@ const styles = StyleSheet.create({
         height: 26,
         width: 26,
         borderRadius: 13,
-        backgroundColor: '#e2e8f0',
         alignItems: 'center',
         justifyContent: 'center',
     },
     clearBtnText: {
-        color: '#64748b',
         fontSize: 13,
         fontWeight: 'bold',
     },
@@ -240,13 +262,11 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 13,
-        color: '#64748b',
         flex: 1,
     },
     countText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#3b82f6',
     },
     gridList: {
         paddingBottom: 24,
@@ -258,7 +278,6 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 15,
-        color: '#64748b',
         textAlign: 'center',
     },
 });

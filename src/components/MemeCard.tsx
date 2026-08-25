@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
 import { Image } from 'expo-image';
 
 interface MemeCardProps {
@@ -9,9 +9,14 @@ interface MemeCardProps {
 
 export const MemeCard = React.memo(
     ({ uri, onPress }: MemeCardProps) => {
+        const isDark = useColorScheme() === 'dark';
+
         return (
             <TouchableOpacity
-                style={styles.imageCard}
+                style={[
+                    styles.imageCard,
+                    { backgroundColor: isDark ? '#1e293b' : '#e2e8f0' },
+                ]}
                 activeOpacity={0.8}
                 onPress={() => onPress(uri)}
             >
@@ -21,7 +26,7 @@ export const MemeCard = React.memo(
                     contentFit="cover"
                     recyclingKey={uri}
                     cachePolicy="memory-disk"
-                    transition={0} // Disable fade transitions on list updates
+                    transition={0}
                 />
             </TouchableOpacity>
         );
@@ -36,7 +41,6 @@ const styles = StyleSheet.create({
         aspectRatio: 1,
         borderRadius: 10,
         overflow: 'hidden',
-        backgroundColor: '#e2e8f0',
     },
     thumbnail: {
         width: '100%',
