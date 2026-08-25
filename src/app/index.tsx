@@ -68,7 +68,7 @@ export default function MemeSearchScreen() {
             if (!isMounted) return;
 
             try {
-                const { status } = await MediaLibrary.requestPermissionsAsync(false);
+                const { status } = await MediaLibrary.requestPermissionsAsync(false, ['photo']);
                 if (status !== 'granted') {
                     if (isMounted) setSyncStatus('Gallery permission denied.');
                     return;
